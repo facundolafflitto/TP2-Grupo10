@@ -1,0 +1,71 @@
+# MarketplaceTP - Estado actual
+
+## Base de datos
+
+* SQL Server 2025 instalado.
+* Instancia: MSSQLSERVER.
+* Base de datos: MarketplaceTP.
+* TCP/IP habilitado.
+* Puerto TCP: 1433.
+* SQL Server configurado en Mixed Mode.
+* Login SQL creado:
+
+  * Usuario: marketplace_user
+  * Password: Marketplace123!
+
+## Sequelize
+
+Paquetes instalados:
+
+npm install sequelize tedious
+
+Conexión funcionando correctamente.
+
+database.js:
+
+* Host: 127.0.0.1
+* Puerto: 1433
+* Base: MarketplaceTP
+* Usuario: marketplace_user
+* Contra: MarketPlace123!
+
+Prueba realizada:
+
+node src/testConnection.js
+
+Resultado:
+✅ Conexión exitosa
+
+## Estructura
+
+src/
+├── config/
+│   └── database.js
+├── models/
+│   ├── Usuario.js
+│   ├── Rol.js
+│   ├── UsuarioRol.js
+│   ├── Categoria.js
+│   ├── Producto.js
+│   ├── Orden.js
+│   └── OrdenDetalle.js
+├── controllers/
+├── middlewares/
+├── routes/
+└── services/
+
+## Pendiente
+
+1. Crear models/index.js
+2. Definir asociaciones Sequelize:
+
+   * Usuario ↔ Rol
+   * Usuario ↔ Producto
+   * Categoria ↔ Producto
+   * Usuario ↔ Orden
+   * Orden ↔ OrdenDetalle
+   * Producto ↔ OrdenDetalle
+3. Crear controladores.
+4. Crear rutas.
+5. Crear API REST.
+6. Implementar autenticación y roles.
