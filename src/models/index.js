@@ -21,47 +21,64 @@ Rol.belongsToMany(Usuario, {
 
 // Usuario -> Producto
 Usuario.hasMany(Producto, {
-    foreignKey: "VendedorId"
+    foreignKey: "VendedorId",
+    as: "Productos"
 });
 
 Producto.belongsTo(Usuario, {
-    foreignKey: "VendedorId"
+    foreignKey: "VendedorId",
+    as: "Vendedor"
 });
 
 // Categoria -> Producto
 Categoria.hasMany(Producto, {
-    foreignKey: "CategoriaId"
+    foreignKey: "CategoriaId",
+    as: "Productos"
 });
 
 Producto.belongsTo(Categoria, {
-    foreignKey: "CategoriaId"
+    foreignKey: "CategoriaId",
+    as: "Categoria"
 });
 
 // Usuario -> Orden
 Usuario.hasMany(Orden, {
-    foreignKey: "CompradorId"
+    foreignKey: "CompradorId",
+    as: "Ordenes"
 });
 
 Orden.belongsTo(Usuario, {
-    foreignKey: "CompradorId"
+    foreignKey: "CompradorId",
+    as: "Comprador"
 });
 
 // Orden -> OrdenDetalle
 Orden.hasMany(OrdenDetalle, {
-    foreignKey: "OrdenId"
+    foreignKey: "OrdenId",
+    as: "Detalles",
+    onDelete: "NO ACTION",
+    onUpdate: "NO ACTION"
 });
 
 OrdenDetalle.belongsTo(Orden, {
-    foreignKey: "OrdenId"
+    foreignKey: "OrdenId",
+    onDelete: "NO ACTION",
+    onUpdate: "NO ACTION"
 });
 
 // Producto -> OrdenDetalle
 Producto.hasMany(OrdenDetalle, {
-    foreignKey: "ProductoId"
+    foreignKey: "ProductoId",
+    as: "Detalles",
+    onDelete: "NO ACTION",
+    onUpdate: "NO ACTION"
 });
 
 OrdenDetalle.belongsTo(Producto, {
-    foreignKey: "ProductoId"
+    foreignKey: "ProductoId",
+    as: "Producto",
+    onDelete: "NO ACTION",
+    onUpdate: "NO ACTION"
 });
 
 module.exports = {
