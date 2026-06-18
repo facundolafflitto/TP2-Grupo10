@@ -12,7 +12,8 @@
         <nav class="nav">
             <a href="#inicio">Inicio</a>
             <a href="#productos">Productos</a>
-            <a href="#ordenes" data-auth-link>Ordenes</a>
+            <a href="#carrito" data-user-link>Carrito <span id="cartCount">0</span></a>
+            <a href="#ordenes" data-user-link>Ordenes</a>
             <a href="#login" data-guest-link>Login</a>
             <a href="#registro" data-guest-link>Registro</a>
             <button class="link-button hidden" type="button" id="logoutButton" data-auth-link>Cerrar sesion</button>
@@ -50,6 +51,13 @@
                     <label>Nombre<input type="text" name="nombre" required minlength="3"></label>
                     <label>Email<input type="email" name="email" required></label>
                     <label>Password<input type="password" name="password" required minlength="4"></label>
+                    <label>Tipo de cuenta
+                        <select name="rol" id="registerRole">
+                            <option value="USUARIO">Usuario</option>
+                            <option value="ADMIN">Admin</option>
+                        </select>
+                    </label>
+                    <label class="hidden" id="adminCodeField">Codigo admin<input type="password" name="adminCode"></label>
                     <button class="button primary" type="submit">Crear cuenta</button>
                 </form>
             </div>
@@ -61,7 +69,7 @@
                     <p class="eyebrow">Catalogo</p>
                     <h2>Productos</h2>
                 </div>
-                <button class="button secondary hidden" type="button" id="toggleProductForm" data-auth-link>Publicar producto</button>
+                <button class="button secondary hidden" type="button" id="toggleProductForm" data-user-link>Publicar producto</button>
             </div>
 
             <form class="panel form product-form hidden" id="productForm">
@@ -80,6 +88,17 @@
 
             <div class="filter-bar" id="categoryFilters"></div>
             <div class="product-grid" id="productGrid"></div>
+        </section>
+
+        <section class="view" id="view-carrito">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Compra</p>
+                    <h2>Carrito</h2>
+                </div>
+                <button class="button primary" type="button" id="checkoutButton">Finalizar compra</button>
+            </div>
+            <div class="cart-list" id="cartList"></div>
         </section>
 
         <section class="view" id="view-ordenes">

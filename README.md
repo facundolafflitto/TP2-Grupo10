@@ -20,6 +20,7 @@ Crear un archivo `.env` en la raiz del proyecto usando como base `.env.example`:
 ```env
 JWT_SECRET=reemplazar_por_una_clave_larga_y_segura
 JWT_EXPIRES_IN=8h
+ADMIN_REGISTER_CODE=reemplazar_por_un_codigo_privado
 DB_NAME=MarketplaceTP
 DB_USER=marketplace_user
 DB_PASSWORD=reemplazar_por_la_password
@@ -77,9 +78,15 @@ POST /api/auth/register
 {
   "nombre": "Usuario Demo",
   "email": "demo@mail.com",
-  "password": "123456"
+  "password": "123456",
+  "rol": "USUARIO"
 }
 ```
+
+Roles permitidos en el registro:
+
+- `USUARIO`: puede comprar, vender, publicar productos y ver sus ordenes.
+- `ADMIN`: puede administrar categorias y productos. Para registrarlo se debe enviar `adminCode` con el valor configurado en `ADMIN_REGISTER_CODE`.
 
 Iniciar sesion:
 
@@ -203,8 +210,16 @@ POST /api/ordenes
 
 ```json
 {
-  "productoId": 1,
-  "cantidad": 1
+  "items": [
+    {
+      "productoId": 1,
+      "cantidad": 2
+    },
+    {
+      "productoId": 2,
+      "cantidad": 1
+    }
+  ]
 }
 ```
 

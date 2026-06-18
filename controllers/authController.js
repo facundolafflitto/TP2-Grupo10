@@ -8,6 +8,27 @@ async function register(req, res) {
         const nombre = req.body.nombre;
         const email = req.body.email;
         const password = req.body.password;
+        const rolSolicitado = String(req.body.rol || "USUARIO").toUpperCase();
+        const adminCode = req.body.adminCode;
+        const rolesPermitidos = ["USUARIO", "ADMIN"];
+
+        if (!nombre || !email || !password) {
+            return res.status(400).json({
+                mensaje: "Nombre, email y password son obligatorios"
+            });
+        }
+
+        if (!rolesPermitidos.includes(rolSolicitado)) {
+            return res.status(400).json({
+                mensaje: "Rol invalido"
+            });
+        }
+
+        if (rolSolicitado === "ADMIN" && adminCode !== process.env.ADMIN_REGISTER_CODE) {
+            return res.status(403).json({
+                mensaje: "Codigo de administrador invalido"
+            });
+        }
 
         const usuarioExistente = await Usuario.findOne({
             where: {
@@ -31,13 +52,26 @@ async function register(req, res) {
             Activo: true
         });
 
+        const rol = await Rol.findOne({
+            where: {
+                Nombre: rolSolicitado
+            }
+        });
+
+        if (!rol) {
+            return res.status(500).json({
+                mensaje: "Rol no configurado en la base de datos"
+            });
+        }
+
         await UsuarioRol.create({
             UsuarioId: usuario.Id,
-            RolId: 3
+            RolId: rol.Id
         });
 
         res.status(201).json({
-            mensaje: "Usuario registrado correctamente"
+            mensaje: "Usuario registrado correctamente",
+            rol: rol.Nombre
         });
 
     } catch (error) {

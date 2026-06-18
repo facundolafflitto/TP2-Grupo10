@@ -1,14 +1,32 @@
 const state = {
     products: [],
     categories: [],
+    cart: JSON.parse(localStorage.getItem("carrito") || "[]"),
     selectedCategory: "",
     user: JSON.parse(localStorage.getItem("usuarioActual") || "null"),
     token: localStorage.getItem("authToken") || ""
 };
 
+function normalizeStoredUser() {
+    if (!state.user || !Array.isArray(state.user.roles)) {
+        return;
+    }
+
+    const hasLegacyUserRole = state.user.roles.includes("COMPRADOR") || state.user.roles.includes("VENDEDOR");
+
+    if (hasLegacyUserRole && !state.user.roles.includes("USUARIO")) {
+        state.user.roles = state.user.roles.filter(function(role) {
+            return role !== "COMPRADOR" && role !== "VENDEDOR";
+        });
+        state.user.roles.push("USUARIO");
+        localStorage.setItem("usuarioActual", JSON.stringify(state.user));
+    }
+}
+
 const routes = {
     inicio: document.getElementById("inicio"),
     productos: document.getElementById("view-productos"),
+    carrito: document.getElementById("view-carrito"),
     login: document.getElementById("view-login"),
     registro: document.getElementById("view-registro"),
     ordenes: document.getElementById("view-ordenes")
@@ -17,9 +35,26 @@ const routes = {
 const productGrid = document.getElementById("productGrid");
 const categoryFilters = document.getElementById("categoryFilters");
 const orderList = document.getElementById("orderList");
+const cartList = document.getElementById("cartList");
+const cartCount = document.getElementById("cartCount");
 const toast = document.getElementById("toast");
 const productForm = document.getElementById("productForm");
 const categorySelect = productForm.elements.categoriaId;
+const registerRole = document.getElementById("registerRole");
+const adminCodeField = document.getElementById("adminCodeField");
+
+function userHasRole(role) {
+    const roles = state.user ? state.user.roles || [] : [];
+    return roles.includes(role);
+}
+
+function canBuy() {
+    return userHasRole("USUARIO") || userHasRole("ADMIN");
+}
+
+function canSell() {
+    return userHasRole("USUARIO") || userHasRole("ADMIN");
+}
 
 function authHeaders() {
     return state.token ? { Authorization: "Bearer " + state.token } : {};
@@ -49,6 +84,16 @@ function syncAuthUi() {
     document.querySelectorAll("[data-guest-link]").forEach(function(element) {
         element.classList.toggle("hidden", Boolean(state.user));
     });
+
+    document.querySelectorAll("[data-user-link]").forEach(function(element) {
+        element.classList.toggle("hidden", !canBuy());
+    });
+
+    if (!canSell()) {
+        productForm.classList.add("hidden");
+    }
+
+    updateCartCount();
 }
 
 function navigate() {
@@ -64,13 +109,23 @@ function navigate() {
     }
 
     if (route === "ordenes") {
-        if (!state.user) {
+        if (!canBuy()) {
             window.location.hash = "login";
-            showToast("Tenes que iniciar sesion para ver tus ordenes.", true);
+            showToast("Necesitas iniciar sesion para ver ordenes.", true);
             return;
         }
 
         loadOrders();
+    }
+
+    if (route === "carrito") {
+        if (!canBuy()) {
+            window.location.hash = "productos";
+            showToast("Necesitas iniciar sesion para usar el carrito.", true);
+            return;
+        }
+
+        renderCart();
     }
 }
 
@@ -138,7 +193,7 @@ function canManageProduct(product) {
     }
 
     const roles = state.user.roles || [];
-    return roles.includes("ADMIN") || product.vendedorId === state.user.id;
+    return roles.includes("ADMIN") || (roles.includes("USUARIO") && product.vendedorId === state.user.id);
 }
 
 function renderProducts() {
@@ -151,7 +206,7 @@ function renderProducts() {
         const image = product.imagenUrl
             ? `<img src="${product.imagenUrl}" alt="${product.titulo}">`
             : `<strong>${product.titulo.slice(0, 1)}</strong>`;
-        const disabledBuy = !state.user || product.stock <= 0 ? "disabled" : "";
+        const disabledBuy = !canBuy() || product.stock <= 0 ? "disabled" : "";
         const manageActions = canManageProduct(product) ? `
             <div class="inline-actions">
                 <button class="button secondary" type="button" data-edit="${product.id}">Editar</button>
@@ -177,8 +232,8 @@ function renderProducts() {
                     <p>Vendedor: <strong>${product.vendedor}</strong></p>
                 </div>
                 <div class="product-actions">
-                    <button class="button primary" type="button" data-buy="${product.id}" ${disabledBuy}>
-                        ${state.user ? product.stock > 0 ? "Comprar" : "Sin stock" : "Inicia sesion para comprar"}
+                    <button class="button primary" type="button" data-cart-add="${product.id}" ${disabledBuy}>
+                        ${canBuy() ? product.stock > 0 ? "Agregar al carrito" : "Sin stock" : "Inicia sesion"}
                     </button>
                     ${manageActions}
                 </div>
@@ -187,7 +242,110 @@ function renderProducts() {
     }).join("");
 }
 
-async function buyProduct(productId) {
+function saveCart() {
+    localStorage.setItem("carrito", JSON.stringify(state.cart));
+    updateCartCount();
+}
+
+function updateCartCount() {
+    const total = state.cart.reduce(function(acumulado, item) {
+        return acumulado + item.cantidad;
+    }, 0);
+
+    cartCount.textContent = total;
+}
+
+function addToCart(productId) {
+    if (!canBuy()) {
+        showToast("Necesitas iniciar sesion para comprar.", true);
+        return;
+    }
+
+    const product = state.products.find(function(item) {
+        return item.id === productId;
+    });
+
+    if (!product || product.stock <= 0) {
+        showToast("Producto sin stock.", true);
+        return;
+    }
+
+    const cartItem = state.cart.find(function(item) {
+        return item.productoId === productId;
+    });
+
+    if (cartItem) {
+        cartItem.cantidad += 1;
+    } else {
+        state.cart.push({
+            productoId: product.id,
+            titulo: product.titulo,
+            precio: Number(product.precio),
+            stock: product.stock,
+            cantidad: 1
+        });
+    }
+
+    saveCart();
+    showToast("Producto agregado al carrito.");
+}
+
+function renderCart() {
+    if (state.cart.length === 0) {
+        cartList.innerHTML = `<div class="empty">El carrito esta vacio.</div>`;
+        return;
+    }
+
+    const total = state.cart.reduce(function(acumulado, item) {
+        return acumulado + item.precio * item.cantidad;
+    }, 0);
+
+    cartList.innerHTML = state.cart.map(function(item) {
+        return `
+            <article class="cart-card">
+                <div>
+                    <h3>${item.titulo}</h3>
+                    <p>$ ${formatPrice(item.precio)} c/u</p>
+                </div>
+                <div class="quantity-control">
+                    <button class="button secondary" type="button" data-cart-dec="${item.productoId}">-</button>
+                    <input type="number" min="1" value="${item.cantidad}" data-cart-qty="${item.productoId}">
+                    <button class="button secondary" type="button" data-cart-inc="${item.productoId}">+</button>
+                </div>
+                <button class="button secondary" type="button" data-cart-remove="${item.productoId}">Quitar</button>
+            </article>
+        `;
+    }).join("") + `<div class="order-card"><h3>Total: $ ${formatPrice(total)}</h3></div>`;
+}
+
+function updateCartItem(productId, cantidad) {
+    const item = state.cart.find(function(cartItem) {
+        return cartItem.productoId === productId;
+    });
+
+    if (!item) {
+        return;
+    }
+
+    item.cantidad = Math.max(1, Number(cantidad) || 1);
+    saveCart();
+    renderCart();
+}
+
+function removeCartItem(productId) {
+    state.cart = state.cart.filter(function(item) {
+        return item.productoId !== productId;
+    });
+    saveCart();
+    renderCart();
+}
+
+async function checkoutCart() {
+    if (state.cart.length === 0) {
+        showToast("El carrito esta vacio.", true);
+        return;
+    }
+
     try {
         const data = await requestJson("/api/ordenes", {
             method: "POST",
@@ -195,10 +353,20 @@ async function buyProduct(productId) {
                 "Content-Type": "application/json",
                 ...authHeaders()
             },
-            body: JSON.stringify({ productoId: productId, cantidad: 1 })
+            body: JSON.stringify({
+                items: state.cart.map(function(item) {
+                    return {
+                        productoId: item.productoId,
+                        cantidad: item.cantidad
+                    };
+                })
+            })
         });
 
         showToast("Compra realizada. Orden #" + data.orden.id + ".");
+        state.cart = [];
+        saveCart();
+        renderCart();
         loadProducts();
     } catch (error) {
         showToast(error.message, true);
@@ -363,7 +531,9 @@ async function register(event) {
             body: JSON.stringify({
                 nombre: formData.get("nombre"),
                 email: formData.get("email"),
-                password: formData.get("password")
+                password: formData.get("password"),
+                rol: formData.get("rol"),
+                adminCode: formData.get("adminCode")
             })
         });
 
@@ -378,8 +548,10 @@ async function register(event) {
 function logout() {
     state.user = null;
     state.token = "";
+    state.cart = [];
     localStorage.removeItem("usuarioActual");
     localStorage.removeItem("authToken");
+    localStorage.removeItem("carrito");
     productForm.classList.add("hidden");
     syncAuthUi();
     window.location.hash = "inicio";
@@ -388,6 +560,10 @@ function logout() {
 document.getElementById("loginForm").addEventListener("submit", login);
 document.getElementById("registerForm").addEventListener("submit", register);
 document.getElementById("logoutButton").addEventListener("click", logout);
+document.getElementById("checkoutButton").addEventListener("click", checkoutCart);
+registerRole.addEventListener("change", function() {
+    adminCodeField.classList.toggle("hidden", registerRole.value !== "ADMIN");
+});
 document.getElementById("toggleProductForm").addEventListener("click", function() {
     productForm.reset();
     productForm.elements.id.value = "";
@@ -398,6 +574,37 @@ document.getElementById("cancelProductEdit").addEventListener("click", function(
     productForm.classList.add("hidden");
 });
 productForm.addEventListener("submit", saveProduct);
+cartList.addEventListener("click", function(event) {
+    const incrementId = event.target.dataset.cartInc;
+    const decrementId = event.target.dataset.cartDec;
+    const removeId = event.target.dataset.cartRemove;
+
+    if (incrementId) {
+        const item = state.cart.find(function(cartItem) {
+            return cartItem.productoId === Number(incrementId);
+        });
+        updateCartItem(Number(incrementId), item.cantidad + 1);
+    }
+
+    if (decrementId) {
+        const item = state.cart.find(function(cartItem) {
+            return cartItem.productoId === Number(decrementId);
+        });
+        updateCartItem(Number(decrementId), item.cantidad - 1);
+    }
+
+    if (removeId) {
+        removeCartItem(Number(removeId));
+    }
+});
+
+cartList.addEventListener("change", function(event) {
+    const quantityId = event.target.dataset.cartQty;
+
+    if (quantityId) {
+        updateCartItem(Number(quantityId), event.target.value);
+    }
+});
 
 categoryFilters.addEventListener("click", function(event) {
     if (!event.target.matches("[data-category]")) {
@@ -410,13 +617,13 @@ categoryFilters.addEventListener("click", function(event) {
 });
 
 productGrid.addEventListener("click", function(event) {
-    const buyId = event.target.dataset.buy;
+    const cartAddId = event.target.dataset.cartAdd;
     const editId = event.target.dataset.edit;
     const deleteId = event.target.dataset.delete;
     const restockId = event.target.dataset.restock;
 
-    if (buyId) {
-        buyProduct(Number(buyId));
+    if (cartAddId) {
+        addToCart(Number(cartAddId));
     }
 
     if (editId) {
@@ -433,5 +640,6 @@ productGrid.addEventListener("click", function(event) {
 });
 
 window.addEventListener("hashchange", navigate);
+normalizeStoredUser();
 syncAuthUi();
 navigate();

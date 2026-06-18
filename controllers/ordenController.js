@@ -69,13 +69,53 @@ async function listarOrdenes(req, res) {
     }
 }
 
-async function crearOrden(req, res) {
-    const productoId = Number(req.body.productoId);
-    const cantidad = Number(req.body.cantidad || 1);
+function agruparItems(itemsRecibidos) {
+    const itemsAgrupados = [];
 
-    if (!productoId || cantidad < 1) {
+    itemsRecibidos.forEach(function(item) {
+        const productoId = Number(item.productoId);
+        const cantidad = Number(item.cantidad || 1);
+
+        if (!productoId || !Number.isInteger(cantidad) || cantidad < 1) {
+            return;
+        }
+
+        const itemExistente = itemsAgrupados.find(function(itemAgrupado) {
+            return itemAgrupado.productoId === productoId;
+        });
+
+        if (itemExistente) {
+            itemExistente.cantidad += cantidad;
+        } else {
+            itemsAgrupados.push({
+                productoId: productoId,
+                cantidad: cantidad
+            });
+        }
+    });
+
+    return itemsAgrupados;
+}
+
+async function crearOrden(req, res) {
+    const itemsRecibidos = Array.isArray(req.body.items)
+        ? req.body.items
+        : [{
+            productoId: req.body.productoId,
+            cantidad: req.body.cantidad || 1
+        }];
+
+    if (itemsRecibidos.length === 0) {
         return res.status(400).json({
-            mensaje: "Datos de compra inválidos"
+            mensaje: "La compra tiene que tener al menos un producto"
+        });
+    }
+
+    const itemsAgrupados = agruparItems(itemsRecibidos);
+
+    if (itemsAgrupados.length === 0) {
+        return res.status(400).json({
+            mensaje: "Datos de compra invalidos"
         });
     }
 
@@ -93,19 +133,28 @@ async function crearOrden(req, res) {
             });
         }
 
-        const producto = await Producto.findByPk(productoId, { transaction });
+        const detallesCompra = [];
 
-        if (!producto || !producto.Activo) {
-            await transaction.rollback();
-            return res.status(404).json({
-                mensaje: "Producto no encontrado"
-            });
-        }
+        for (const item of itemsAgrupados) {
+            const producto = await Producto.findByPk(item.productoId, { transaction });
 
-        if (producto.Stock < cantidad) {
-            await transaction.rollback();
-            return res.status(400).json({
-                mensaje: "No hay stock suficiente"
+            if (!producto || !producto.Activo) {
+                await transaction.rollback();
+                return res.status(404).json({
+                    mensaje: "Producto no encontrado"
+                });
+            }
+
+            if (producto.Stock < item.cantidad) {
+                await transaction.rollback();
+                return res.status(400).json({
+                    mensaje: "No hay stock suficiente para " + producto.Titulo
+                });
+            }
+
+            detallesCompra.push({
+                producto: producto,
+                cantidad: item.cantidad
             });
         }
 
@@ -115,15 +164,21 @@ async function crearOrden(req, res) {
             Estado: "Completada"
         }, { transaction });
 
-        await OrdenDetalle.create({
-            OrdenId: orden.Id,
-            ProductoId: producto.Id,
-            Cantidad: cantidad,
-            PrecioUnitario: producto.Precio
-        }, { transaction });
+        let total = 0;
 
-        producto.Stock = producto.Stock - cantidad;
-        await producto.save({ transaction });
+        for (const detalle of detallesCompra) {
+            await OrdenDetalle.create({
+                OrdenId: orden.Id,
+                ProductoId: detalle.producto.Id,
+                Cantidad: detalle.cantidad,
+                PrecioUnitario: detalle.producto.Precio
+            }, { transaction });
+
+            detalle.producto.Stock = detalle.producto.Stock - detalle.cantidad;
+            await detalle.producto.save({ transaction });
+
+            total += Number(detalle.producto.Precio) * detalle.cantidad;
+        }
 
         await transaction.commit();
 
@@ -132,7 +187,8 @@ async function crearOrden(req, res) {
             orden: {
                 id: orden.Id,
                 estado: orden.Estado,
-                total: (Number(producto.Precio) * cantidad).toFixed(2)
+                total: total.toFixed(2),
+                cantidadItems: detallesCompra.length
             }
         });
     } catch (error) {
