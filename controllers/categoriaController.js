@@ -55,8 +55,21 @@ async function crearCategoria(req, res) {
             });
         }
 
+        const nombre = String(req.body.nombre).trim();
+        const categoriaExistente = await Categoria.findOne({
+            where: {
+                Nombre: nombre
+            }
+        });
+
+        if (categoriaExistente) {
+            return res.status(409).json({
+                mensaje: "La categoria ya existe"
+            });
+        }
+
         const categoria = await Categoria.create({
-            Nombre: String(req.body.nombre).trim()
+            Nombre: nombre
         });
 
         res.status(201).json({

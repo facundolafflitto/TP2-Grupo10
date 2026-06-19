@@ -37,6 +37,11 @@ const categoryFilters = document.getElementById("categoryFilters");
 const orderList = document.getElementById("orderList");
 const cartList = document.getElementById("cartList");
 const cartCount = document.getElementById("cartCount");
+const categoryForm = document.getElementById("categoryForm");
+const homeProductCount = document.getElementById("homeProductCount");
+const homeCategoryCount = document.getElementById("homeCategoryCount");
+const homeCartCount = document.getElementById("homeCartCount");
+const homeFeaturedProducts = document.getElementById("homeFeaturedProducts");
 const toast = document.getElementById("toast");
 const productForm = document.getElementById("productForm");
 const categorySelect = productForm.elements.categoriaId;
@@ -54,6 +59,10 @@ function canBuy() {
 
 function canSell() {
     return userHasRole("USUARIO") || userHasRole("ADMIN");
+}
+
+function isAdmin() {
+    return userHasRole("ADMIN");
 }
 
 function authHeaders() {
@@ -89,6 +98,10 @@ function syncAuthUi() {
         element.classList.toggle("hidden", !canBuy());
     });
 
+    document.querySelectorAll("[data-admin-link]").forEach(function(element) {
+        element.classList.toggle("hidden", !isAdmin());
+    });
+
     if (!canSell()) {
         productForm.classList.add("hidden");
     }
@@ -106,6 +119,10 @@ function navigate() {
     if (route === "productos") {
         loadProducts();
         loadCategories();
+    }
+
+    if (route === "inicio") {
+        loadHomeData();
     }
 
     if (route === "ordenes") {
@@ -127,6 +144,7 @@ function navigate() {
 
         renderCart();
     }
+
 }
 
 async function requestJson(url, options) {
@@ -150,6 +168,45 @@ async function loadCategories() {
     }
 }
 
+async function loadHomeData() {
+    try {
+        const productos = await requestJson("/api/productos");
+        const categorias = await requestJson("/api/categorias");
+
+        homeProductCount.textContent = productos.length;
+        homeCategoryCount.textContent = categorias.length;
+        homeCartCount.textContent = state.cart.reduce(function(total, item) {
+            return total + item.cantidad;
+        }, 0);
+
+        renderHomeFeaturedProducts(productos.slice(0, 4));
+    } catch (error) {
+        homeFeaturedProducts.innerHTML = `<div class="empty">No se pudieron cargar los productos destacados.</div>`;
+    }
+}
+
+function renderHomeFeaturedProducts(products) {
+    if (products.length === 0) {
+        homeFeaturedProducts.innerHTML = `<div class="empty">Todavia no hay productos publicados.</div>`;
+        return;
+    }
+
+    homeFeaturedProducts.innerHTML = products.map(function(product) {
+        const image = product.imagenUrl
+            ? `<img src="${product.imagenUrl}" alt="${product.titulo}">`
+            : `<strong>${product.titulo.slice(0, 1)}</strong>`;
+
+        return `
+            <article class="featured-product">
+                <div>${image}</div>
+                <span>${product.categoria}</span>
+                <h3>${product.titulo}</h3>
+                <p>$ ${formatPrice(product.precio)}</p>
+            </article>
+        `;
+    }).join("");
+}
+
 function renderCategories() {
     const chips = [
         `<button class="filter-chip ${state.selectedCategory ? "" : "active"}" type="button" data-category="">Todos</button>`
@@ -167,6 +224,32 @@ function fillCategorySelect() {
     categorySelect.innerHTML = state.categories.map(function(category) {
         return `<option value="${category.id}">${category.nombre}</option>`;
     }).join("");
+}
+
+async function createCategory(event) {
+    event.preventDefault();
+
+    const formData = new FormData(categoryForm);
+
+    try {
+        await requestJson("/api/categorias", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...authHeaders()
+            },
+            body: JSON.stringify({
+                nombre: formData.get("nombre")
+            })
+        });
+
+        categoryForm.reset();
+        showToast("Categoria creada.");
+        await loadCategories();
+        await loadHomeData();
+    } catch (error) {
+        showToast(error.message, true);
+    }
 }
 
 async function loadProducts() {
@@ -253,6 +336,7 @@ function updateCartCount() {
     }, 0);
 
     cartCount.textContent = total;
+    homeCartCount.textContent = total;
 }
 
 function addToCart(productId) {
@@ -561,6 +645,7 @@ document.getElementById("loginForm").addEventListener("submit", login);
 document.getElementById("registerForm").addEventListener("submit", register);
 document.getElementById("logoutButton").addEventListener("click", logout);
 document.getElementById("checkoutButton").addEventListener("click", checkoutCart);
+categoryForm.addEventListener("submit", createCategory);
 registerRole.addEventListener("change", function() {
     adminCodeField.classList.toggle("hidden", registerRole.value !== "ADMIN");
 });
