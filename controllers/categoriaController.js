@@ -1,156 +1,66 @@
-const { Categoria, Producto } = require("../models");
+const categoriaService = require("../services/categoriaService");
 
-function formatearCategoria(categoria) {
-    return {
-        id: categoria.Id,
-        nombre: categoria.Nombre
-    };
-}
+function responderError(res, error, mensajePorDefecto) {
+    console.log(error);
 
-function validarNombre(nombre) {
-    return nombre && String(nombre).trim().length >= 3;
+    res.status(error.status || 500).json({
+        mensaje: error.status ? error.message : mensajePorDefecto
+    });
 }
 
 async function listarCategorias(req, res) {
     try {
-        const categorias = await Categoria.findAll({
-            order: [["Nombre", "ASC"]]
-        });
-
-        res.json(categorias.map(formatearCategoria));
+        const categorias = await categoriaService.listarCategorias();
+        res.json(categorias);
     } catch (error) {
-        console.log(error);
-
-        res.status(500).json({
-            mensaje: "Error al obtener categorias"
-        });
+        responderError(res, error, "Error al obtener categorias");
     }
 }
 
 async function obtenerCategoria(req, res) {
     try {
-        const categoria = await Categoria.findByPk(req.params.id);
-
-        if (!categoria) {
-            return res.status(404).json({
-                mensaje: "Categoria no encontrada"
-            });
-        }
-
-        res.json(formatearCategoria(categoria));
+        const categoria = await categoriaService.obtenerCategoria(req.params.id);
+        res.json(categoria);
     } catch (error) {
-        console.log(error);
-
-        res.status(500).json({
-            mensaje: "Error al obtener categoria"
-        });
+        responderError(res, error, "Error al obtener categoria");
     }
 }
 
 async function crearCategoria(req, res) {
     try {
-        if (!validarNombre(req.body.nombre)) {
-            return res.status(400).json({
-                mensaje: "El nombre debe tener al menos 3 caracteres"
-            });
-        }
-
-        const nombre = String(req.body.nombre).trim();
-        const categoriaExistente = await Categoria.findOne({
-            where: {
-                Nombre: nombre
-            }
-        });
-
-        if (categoriaExistente) {
-            return res.status(409).json({
-                mensaje: "La categoria ya existe"
-            });
-        }
-
-        const categoria = await Categoria.create({
-            Nombre: nombre
-        });
+        const categoria = await categoriaService.crearCategoria(req.body);
 
         res.status(201).json({
             mensaje: "Categoria creada correctamente",
-            categoria: formatearCategoria(categoria)
+            categoria: categoria
         });
     } catch (error) {
-        console.log(error);
-
-        res.status(500).json({
-            mensaje: "Error al crear categoria"
-        });
+        responderError(res, error, "Error al crear categoria");
     }
 }
 
 async function actualizarCategoria(req, res) {
     try {
-        if (!validarNombre(req.body.nombre)) {
-            return res.status(400).json({
-                mensaje: "El nombre debe tener al menos 3 caracteres"
-            });
-        }
-
-        const categoria = await Categoria.findByPk(req.params.id);
-
-        if (!categoria) {
-            return res.status(404).json({
-                mensaje: "Categoria no encontrada"
-            });
-        }
-
-        categoria.Nombre = String(req.body.nombre).trim();
-        await categoria.save();
+        const categoria = await categoriaService.actualizarCategoria(req.params.id, req.body);
 
         res.json({
             mensaje: "Categoria actualizada correctamente",
-            categoria: formatearCategoria(categoria)
+            categoria: categoria
         });
     } catch (error) {
-        console.log(error);
-
-        res.status(500).json({
-            mensaje: "Error al actualizar categoria"
-        });
+        responderError(res, error, "Error al actualizar categoria");
     }
 }
 
 async function eliminarCategoria(req, res) {
     try {
-        const categoria = await Categoria.findByPk(req.params.id);
-
-        if (!categoria) {
-            return res.status(404).json({
-                mensaje: "Categoria no encontrada"
-            });
-        }
-
-        const productosAsociados = await Producto.count({
-            where: {
-                CategoriaId: categoria.Id,
-                Activo: true
-            }
-        });
-
-        if (productosAsociados > 0) {
-            return res.status(409).json({
-                mensaje: "No se puede eliminar una categoria con productos activos"
-            });
-        }
-
-        await categoria.destroy();
+        await categoriaService.eliminarCategoria(req.params.id);
 
         res.json({
             mensaje: "Categoria eliminada correctamente"
         });
     } catch (error) {
-        console.log(error);
-
-        res.status(500).json({
-            mensaje: "Error al eliminar categoria"
-        });
+        responderError(res, error, "Error al eliminar categoria");
     }
 }
 

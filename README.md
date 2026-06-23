@@ -47,14 +47,14 @@ El frontend se sirve directamente desde la carpeta `public`, por lo que no neces
 ## Estructura MVC
 
 - `models`: modelos Sequelize y relaciones.
-- `controllers`: logica de negocio de cada recurso.
+- `controllers`: reciben las peticiones HTTP y devuelven respuestas.
 - `routes`: definicion de endpoints REST.
 - `middlewares`: autenticacion, autorizacion, logs y manejo de errores.
 - `connection`: conexion a SQL Server con Sequelize.
-- `config`: configuraciones generales del proyecto.
-- `services`: servicios reutilizables.
-- `utils`: utilidades compartidas.
-- `public`: vistas y logica del frontend con HTML, CSS y JavaScript simple.
+- `services`: logica de negocio y operaciones reutilizables con Sequelize.
+- `public`: vistas, estilos y JavaScript del frontend.
+- `public/src/core`: estado, autenticacion, navegacion e inicializacion del frontend.
+- `public/src/pages`: logica de las vistas de inicio, productos, categorias, carrito y ordenes.
 
 ## Autenticacion
 
