@@ -1,6 +1,6 @@
 # TP2 Trabajo Practico
 
-Proyecto Node.js con Express, Sequelize, SQL Server y frontend en HTML, CSS y JavaScript simple. La API permite registrar usuarios, iniciar sesion, listar productos, comprar productos, administrar stock y realizar operaciones CRUD sobre productos y categorias.
+Proyecto Node.js con Express, Sequelize y SQL Server. La API permite registrar usuarios, iniciar sesion, listar productos, comprar productos, administrar stock y realizar operaciones CRUD sobre productos y categorias.
 
 ## Requisitos
 
@@ -36,13 +36,11 @@ DB_TRUST_SERVER_CERTIFICATE=true
 npm start
 ```
 
-El servidor queda disponible en:
+El servidor de la API queda disponible en:
 
 ```text
 http://localhost:3000
 ```
-
-El frontend se sirve directamente desde la carpeta `public`, por lo que no necesita compilacion ni herramientas adicionales.
 
 ## Estructura MVC
 
@@ -52,9 +50,6 @@ El frontend se sirve directamente desde la carpeta `public`, por lo que no neces
 - `middlewares`: autenticacion, autorizacion, logs y manejo de errores.
 - `connection`: conexion a SQL Server con Sequelize.
 - `services`: logica de negocio y operaciones reutilizables con Sequelize.
-- `public`: vistas, estilos y JavaScript del frontend.
-- `public/src/core`: estado, autenticacion, navegacion e inicializacion del frontend.
-- `public/src/pages`: logica de las vistas de inicio, productos, categorias, carrito y ordenes.
 
 ## Autenticacion
 

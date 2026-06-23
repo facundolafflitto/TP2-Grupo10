@@ -1,7 +1,6 @@
 require("dotenv").config();
 
 const express = require("express");
-const path = require("path");
 const { sequelize } = require("./models");
 const authRoutes = require("./routes/authRoutes");
 const productoRoutes = require("./routes/productoRoutes");
@@ -22,7 +21,6 @@ if (!process.env.DB_NAME || !process.env.DB_USER || !process.env.DB_PASSWORD) {
 }
 
 app.use(express.json());
-app.use(express.static("public"));
 app.use(requestLogger);
 
 sequelize.authenticate()
@@ -38,10 +36,6 @@ app.use("/api/productos", productoRoutes);
 app.use("/api/categorias", categoriaRoutes);
 app.use("/api/ordenes", ordenRoutes);
 app.use("/api", notFoundApi);
-
-app.get(/.*/, function(req, res) {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
-});
 
 app.use(manejarErrores);
 
