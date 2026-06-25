@@ -2,11 +2,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Usuario, UsuarioRol, Rol } = require("../models");
 
+function emailTieneFormatoValido(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 async function register(req, res) {
     try {
 
         const nombre = req.body.nombre;
-        const email = req.body.email;
+        const email = req.body.email ? String(req.body.email).trim().toLowerCase() : "";
         const password = req.body.password;
         const rolSolicitado = String(req.body.rol || "USUARIO").toUpperCase();
         const adminCode = req.body.adminCode;
@@ -15,6 +19,12 @@ async function register(req, res) {
         if (!nombre || !email || !password) {
             return res.status(400).json({
                 mensaje: "Nombre, email y password son obligatorios"
+            });
+        }
+
+        if (!emailTieneFormatoValido(email)) {
+            return res.status(400).json({
+                mensaje: "El email debe tener un formato valido"
             });
         }
 
@@ -85,8 +95,14 @@ async function register(req, res) {
 
 async function login(req, res) {
     try {
-        const email = req.body.email;
+        const email = req.body.email ? String(req.body.email).trim().toLowerCase() : "";
         const password = req.body.password;
+
+        if (!emailTieneFormatoValido(email)) {
+            return res.status(400).json({
+                mensaje: "El email debe tener un formato valido"
+            });
+        }
 
         const usuario = await Usuario.findOne({
             where: {
