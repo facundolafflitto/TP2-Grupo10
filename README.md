@@ -121,7 +121,6 @@ POST /api/productos
   "categoriaId": 1,
   "titulo": "Teclado mecanico",
   "descripcion": "Teclado compacto con switches mecanicos",
-  "imagenUrl": "/product-images/keyboard.svg",
   "precio": 75000,
   "stock": 10
 }
@@ -138,6 +137,8 @@ Eliminar producto:
 ```http
 DELETE /api/productos/:id
 ```
+
+La eliminacion de productos es fisica. Si el producto estaba en una orden, el detalle conserva el nombre historico del producto para no romper el historial de compras.
 
 Reponer stock:
 
@@ -189,6 +190,8 @@ Eliminar categoria:
 DELETE /api/categorias/:id
 ```
 
+La eliminacion de categorias es fisica. Si la categoria tiene productos, tambien se eliminan fisicamente esos productos y las ordenes conservan los datos historicos de la compra.
+
 ### Ordenes
 
 Listar ordenes del usuario:
@@ -236,5 +239,5 @@ El proyecto utiliza respuestas HTTP con codigos adecuados para errores comunes:
 - `401`: token faltante, invalido o vencido.
 - `403`: usuario sin permisos.
 - `404`: recurso no encontrado.
-- `409`: conflicto, por ejemplo eliminar una categoria con productos activos.
+- `409`: conflicto de datos.
 - `500`: error interno del servidor.

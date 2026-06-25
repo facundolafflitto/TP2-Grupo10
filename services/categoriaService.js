@@ -1,4 +1,4 @@
-const { Categoria, Producto } = require("../models");
+const { sequelize, Categoria, Producto } = require("../models");
 
 function crearError(status, mensaje) {
     const error = new Error(mensaje);
@@ -76,24 +76,28 @@ async function actualizarCategoria(id, datos) {
 }
 
 async function eliminarCategoria(id) {
-    const categoria = await Categoria.findByPk(id);
+    const transaction = await sequelize.transaction();
 
-    if (!categoria) {
-        throw crearError(404, "Categoria no encontrada");
-    }
+    try {
+        const categoria = await Categoria.findByPk(id, { transaction });
 
-    const productosAsociados = await Producto.count({
-        where: {
-            CategoriaId: categoria.Id,
-            Activo: true
+        if (!categoria) {
+            throw crearError(404, "Categoria no encontrada");
         }
-    });
 
-    if (productosAsociados > 0) {
-        throw crearError(409, "No se puede eliminar una categoria con productos activos");
+        await Producto.destroy({
+            where: {
+                CategoriaId: categoria.Id
+            },
+            transaction: transaction
+        });
+
+        await categoria.destroy({ transaction });
+        await transaction.commit();
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
     }
-
-    await categoria.destroy();
 }
 
 module.exports = {

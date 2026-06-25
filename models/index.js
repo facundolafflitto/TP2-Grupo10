@@ -70,14 +70,14 @@ OrdenDetalle.belongsTo(Orden, {
 Producto.hasMany(OrdenDetalle, {
     foreignKey: "ProductoId",
     as: "Detalles",
-    onDelete: "NO ACTION",
+    onDelete: "SET NULL",
     onUpdate: "NO ACTION"
 });
 
 OrdenDetalle.belongsTo(Producto, {
     foreignKey: "ProductoId",
     as: "Producto",
-    onDelete: "NO ACTION",
+    onDelete: "SET NULL",
     onUpdate: "NO ACTION"
 });
 

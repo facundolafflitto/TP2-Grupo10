@@ -27,7 +27,7 @@ function formatearOrden(orden) {
             return {
                 id: detalle.Id,
                 productoId: detalle.ProductoId,
-                producto: detalle.Producto ? detalle.Producto.Titulo : "Sin producto",
+                producto: detalle.Producto ? detalle.Producto.Titulo : detalle.ProductoNombre || "Producto eliminado",
                 cantidad: detalle.Cantidad,
                 precioUnitario: detalle.PrecioUnitario
             };
@@ -129,7 +129,7 @@ async function crearOrden(datos, usuarioActual) {
         for (const item of itemsAgrupados) {
             const producto = await Producto.findByPk(item.productoId, { transaction });
 
-            if (!producto || !producto.Activo) {
+            if (!producto) {
                 throw crearError(404, "Producto no encontrado");
             }
 
@@ -155,6 +155,7 @@ async function crearOrden(datos, usuarioActual) {
             await OrdenDetalle.create({
                 OrdenId: orden.Id,
                 ProductoId: detalle.producto.Id,
+                ProductoNombre: detalle.producto.Titulo,
                 Cantidad: detalle.cantidad,
                 PrecioUnitario: detalle.producto.Precio
             }, { transaction });

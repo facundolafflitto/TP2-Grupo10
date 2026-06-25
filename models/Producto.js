@@ -7,10 +7,8 @@ const Producto = sequelize.define('Producto', {
   CategoriaId: { type: DataTypes.INTEGER, allowNull: false },
   Titulo: { type: DataTypes.STRING(150), allowNull: false },
   Descripcion: { type: DataTypes.STRING(1000), allowNull: true },
-  ImagenUrl: { type: DataTypes.STRING(255), allowNull: true },
   Precio: { type: DataTypes.DECIMAL(18, 2), allowNull: false },
   Stock: { type: DataTypes.INTEGER, allowNull: false },
-  Activo: { type: DataTypes.BOOLEAN, allowNull: false },
   FechaPublicacion: { type: DataTypes.DATE, allowNull: false }
 }, {
   tableName: 'Productos',

@@ -13,7 +13,11 @@ const OrdenDetalle = sequelize.define('OrdenDetalle', {
   },
   ProductoId: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: true
+  },
+  ProductoNombre: {
+    type: DataTypes.STRING(150),
+    allowNull: true
   },
   Cantidad: {
     type: DataTypes.INTEGER,

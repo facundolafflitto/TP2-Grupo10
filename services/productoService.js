@@ -17,10 +17,8 @@ function formatearProducto(producto) {
         categoria: producto.Categoria ? producto.Categoria.Nombre : "Sin categoria",
         titulo: producto.Titulo,
         descripcion: producto.Descripcion,
-        imagenUrl: producto.ImagenUrl,
         precio: producto.Precio,
         stock: producto.Stock,
-        activo: producto.Activo,
         fechaPublicacion: producto.FechaPublicacion
     };
 }
@@ -79,9 +77,6 @@ function puedeAdministrarProducto(usuarioActual, producto) {
 
 async function listarProductos(categoria) {
     const productos = await Producto.findAll({
-        where: {
-            Activo: true
-        },
         include: [
             {
                 model: Categoria,
@@ -108,7 +103,7 @@ async function listarProductos(categoria) {
 async function obtenerProducto(id) {
     const producto = await buscarProductoConRelaciones(id);
 
-    if (!producto || !producto.Activo) {
+    if (!producto) {
         throw crearError(404, "Producto no encontrado");
     }
 
@@ -133,10 +128,8 @@ async function crearProducto(datos, usuarioActual) {
         CategoriaId: Number(datos.categoriaId),
         Titulo: String(datos.titulo).trim(),
         Descripcion: datos.descripcion ? String(datos.descripcion).trim() : null,
-        ImagenUrl: datos.imagenUrl ? String(datos.imagenUrl).trim() : null,
         Precio: Number(datos.precio),
         Stock: Number(datos.stock),
-        Activo: true,
         FechaPublicacion: new Date()
     });
 
@@ -147,7 +140,7 @@ async function crearProducto(datos, usuarioActual) {
 async function actualizarProducto(id, datos, usuarioActual) {
     const producto = await Producto.findByPk(id);
 
-    if (!producto || !producto.Activo) {
+    if (!producto) {
         throw crearError(404, "Producto no encontrado");
     }
 
@@ -179,10 +172,6 @@ async function actualizarProducto(id, datos, usuarioActual) {
         producto.Descripcion = datos.descripcion ? String(datos.descripcion).trim() : null;
     }
 
-    if (datos.imagenUrl !== undefined) {
-        producto.ImagenUrl = datos.imagenUrl ? String(datos.imagenUrl).trim() : null;
-    }
-
     if (datos.precio !== undefined) {
         producto.Precio = Number(datos.precio);
     }
@@ -200,7 +189,7 @@ async function actualizarProducto(id, datos, usuarioActual) {
 async function eliminarProducto(id, usuarioActual) {
     const producto = await Producto.findByPk(id);
 
-    if (!producto || !producto.Activo) {
+    if (!producto) {
         throw crearError(404, "Producto no encontrado");
     }
 
@@ -208,8 +197,7 @@ async function eliminarProducto(id, usuarioActual) {
         throw crearError(403, "Solo el vendedor del producto o un ADMIN puede eliminarlo");
     }
 
-    producto.Activo = false;
-    await producto.save();
+    await producto.destroy();
 }
 
 async function reponerStock(id, cantidadRecibida, usuarioActual) {
@@ -222,7 +210,7 @@ async function reponerStock(id, cantidadRecibida, usuarioActual) {
 
     const producto = await Producto.findByPk(productoId);
 
-    if (!producto || !producto.Activo) {
+    if (!producto) {
         throw crearError(404, "Producto no encontrado");
     }
 
